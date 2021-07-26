@@ -1,5 +1,6 @@
 import React from "react";
 import firebase from "../../firebase";
+import md5 from "md5";
 import {
   Grid,
   Form,
@@ -10,7 +11,6 @@ import {
   Icon
 } from "semantic-ui-react";
 import { Link } from "react-router-dom";
-import md5 from 'md5';
 
 class Register extends React.Component {
   state = {
@@ -20,7 +20,7 @@ class Register extends React.Component {
     passwordConfirmation: "",
     errors: [],
     loading: false,
-    usersRef: firebase.database().ref('users')
+    usersRef: firebase.database().ref("users")
   };
 
   isFormValid = () => {
@@ -50,7 +50,7 @@ class Register extends React.Component {
   };
 
   isPasswordValid = ({ password, passwordConfirmation }) => {
-    if (password.length < 2 || passwordConfirmation.length < 2) {
+    if (password.length < 6 || passwordConfirmation.length < 6) {
       return false;
     } else if (password !== passwordConfirmation) {
       return false;
@@ -67,49 +67,56 @@ class Register extends React.Component {
   };
 
   handleSubmit = event => {
+    event.preventDefault();
     if (this.isFormValid()) {
-      this.setState({errors: [], loading: true})
-      event.preventDefault();
+      this.setState({ errors: [], loading: true });
       firebase
         .auth()
         .createUserWithEmailAndPassword(this.state.email, this.state.password)
         .then(createdUser => {
-          createdUser.user.updateProfile({
-            displayName: this.state.username,
-            photoURL: `http://gravatar.com/avatar/${md5(
-              createdUser.user.email
-            )}?d=identicon`
-          }).then(()=>{
-            this.saveUser(createdUser).then(()=>{
-              console.log('user saved')
-              this.setState({loading: false})
-            }).catch((err)=>{
-              console.log(err)
-            })
-          }).catch((err)=>{
-            this.setState({errors: this.state.errors.concat(err), loading: false})
-          })
           console.log(createdUser);
+          createdUser.user
+            .updateProfile({
+              displayName: this.state.username,
+              photoURL: `http://gravatar.com/avatar/${md5(
+                createdUser.user.email
+              )}?d=identicon`
+            })
+            .then(() => {
+              this.saveUser(createdUser).then(() => {
+                console.log("user saved");
+              });
+            })
+            .catch(err => {
+              console.error(err);
+              this.setState({
+                errors: this.state.errors.concat(err),
+                loading: false
+              });
+            });
         })
         .catch(err => {
           console.error(err);
-          this.setState({errors: this.state.errors.concat(err), loading: false})
+          this.setState({
+            errors: this.state.errors.concat(err),
+            loading: false
+          });
         });
     }
   };
 
-  handlesInputArray = (errors, inputName) =>{
-  return  errors.some(error=>error.message.toLowerCase().includes(inputName)) ? 'error': ''
-  }
-
-  saveUser = (createdUser)=>{
-    console.log(createdUser.user.uid)
-    return this.state.usersRef.child(createdUser.user.uid).set({  //set overrites any data at that location
+  saveUser = createdUser => {
+    return this.state.usersRef.child(createdUser.user.uid).set({
       name: createdUser.user.displayName,
-      avatart: createdUser.user.photoURL
+      avatar: createdUser.user.photoURL
+    });
+  };
 
-    })
-  }
+  handleInputError = (errors, inputName) => {
+    return errors.some(error => error.message.toLowerCase().includes(inputName))
+      ? "error"
+      : "";
+  };
 
   render() {
     const {
@@ -124,8 +131,8 @@ class Register extends React.Component {
     return (
       <Grid textAlign="center" verticalAlign="middle" className="app">
         <Grid.Column style={{ maxWidth: 450 }}>
-          <Header as="h2" icon color="orange" textAlign="center">
-            <Icon name="code" color="orange" />
+          <Header as="h1" icon color="orange" textAlign="center">
+            <Icon name="puzzle piece" color="orange" />
             Register for DevChat
           </Header>
           <Form onSubmit={this.handleSubmit} size="large">
@@ -149,7 +156,7 @@ class Register extends React.Component {
                 placeholder="Email Address"
                 onChange={this.handleChange}
                 value={email}
-                className = {this.handlesInputArray(errors, 'email')}
+                className={this.handleInputError(errors, "email")}
                 type="email"
               />
 
@@ -160,8 +167,8 @@ class Register extends React.Component {
                 iconPosition="left"
                 placeholder="Password"
                 onChange={this.handleChange}
-                className = {this.handlesInputArray(errors, 'password')}
                 value={password}
+                className={this.handleInputError(errors, "password")}
                 type="password"
               />
 
@@ -173,11 +180,17 @@ class Register extends React.Component {
                 placeholder="Password Confirmation"
                 onChange={this.handleChange}
                 value={passwordConfirmation}
-                className = {this.handlesInputArray(errors, 'password')}
+                className={this.handleInputError(errors, "password")}
                 type="password"
               />
 
-              <Button disabled = {loading} className = {loading ? 'loading' : ''} color="orange" fluid size="large">
+              <Button
+                disabled={loading}
+                className={loading ? "loading" : ""}
+                color="orange"
+                fluid
+                size="large"
+              >
                 Submit
               </Button>
             </Segment>
